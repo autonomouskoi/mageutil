@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/magefile/mage/sh"
@@ -36,7 +37,10 @@ func BuildTypeScript(baseDir, srcDir, destDir string) error {
 		}
 	}
 	if newer {
-		tsc := filepath.Join(baseDir, "node_modules", ".bin", "tsc.cmd")
+		tsc := filepath.Join(baseDir, "node_modules", ".bin", "tsc")
+		if runtime.GOOS == "windows" {
+			tsc += ".cmd"
+		}
 		return sh.Run(tsc, "-p", filepath.Join(baseDir, "tsconfig.json"))
 	}
 	return nil
