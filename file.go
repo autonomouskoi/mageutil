@@ -57,6 +57,26 @@ func CopyRecursively(destDir, srcDir string) error {
 	})
 }
 
+func DirGlob(dir, glob string) ([]string, error) {
+	matches := []string{}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("reading directory: %w", err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		match, err := filepath.Match(glob, name)
+		if err != nil {
+			return nil, fmt.Errorf("bad glob: %w", err)
+		}
+		if !match {
+			continue
+		}
+		matches = append(matches, filepath.Join(dir, name))
+	}
+	return matches, nil
+}
+
 func Mkdir(path string) error {
 	_, err := os.Stat(path)
 	if err == nil {
