@@ -72,7 +72,7 @@ func DirGlob(dir, glob string) ([]string, error) {
 		if !match {
 			continue
 		}
-		matches = append(matches, filepath.Join(dir, name))
+		matches = append(matches, name)
 	}
 	return matches, nil
 }
