@@ -37,8 +37,8 @@ func GoProtosInDir(dir, opt string) error {
 		return fmt.Errorf("matchng files: %w", err)
 	}
 	for _, srcPath := range protos {
-		destPath := strings.TrimSuffix(srcPath, ".proto")+".pb.go"
-		if err := GoProto(destPath, srcPath, dir, opt); err != nil {
+		destPath := strings.TrimSuffix(srcPath, ".proto") + ".pb.go"
+		if err := GoProto(destPath, filepath.Join(dir, srcPath), dir, opt); err != nil {
 			return fmt.Errorf("running protoc on %s: %w", srcPath, err)
 		}
 	}
@@ -67,7 +67,7 @@ func TSProtosInDir(destDir, srcDir string) error {
 	for _, srcFile := range protos {
 		baseName := strings.TrimSuffix(filepath.Base(srcFile), ".proto")
 		destFile := filepath.Join(protoDestDir, baseName+"_pb.js")
-		// srcFile = filepath.Join(srcDir, srcFile)
+		srcFile = filepath.Join(srcDir, srcFile)
 		newer, err := target.Path(destFile, srcFile)
 		if err != nil {
 			return fmt.Errorf("testing %s vs %s: %w", srcFile, destFile, err)
