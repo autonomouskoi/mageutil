@@ -10,6 +10,7 @@ import (
 	"github.com/magefile/mage/target"
 )
 
+// GoProto builds .pb.go code from a .proto
 func GoProto(dest, src, out, opt string) error {
 	newer, err := target.Path(dest, src)
 	if err != nil {
@@ -31,6 +32,7 @@ func GoProto(dest, src, out, opt string) error {
 	return nil
 }
 
+// GoProtosInDir calls GoProto on all .proto files in dir
 func GoProtosInDir(dir, opt string) error {
 	protos, err := DirGlob(dir, "*.proto")
 	if err != nil {
@@ -45,6 +47,7 @@ func GoProtosInDir(dir, opt string) error {
 	return nil
 }
 
+// TSProtosInDir creates _pb.js files in destDir for all .proto files in srcDir
 func TSProtosInDir(destDir, srcDir string) error {
 	if err := HasExec("protoc"); err != nil {
 		return err

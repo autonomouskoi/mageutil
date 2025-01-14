@@ -12,6 +12,7 @@ import (
 	"github.com/magefile/mage/target"
 )
 
+// CopyInDir copies files from srcDir to destDir
 func CopyInDir(destDir, srcDir string, files ...string) error {
 	paths := make(map[string]string, len(files))
 	for _, filename := range files {
@@ -22,6 +23,7 @@ func CopyInDir(destDir, srcDir string, files ...string) error {
 	return CopyFiles(paths)
 }
 
+// CopyFiles paths with keys as source and values as destinations
 func CopyFiles(paths map[string]string) error {
 	for srcPath, destPath := range paths {
 		newer, err := target.Path(destPath, srcPath)
@@ -39,6 +41,7 @@ func CopyFiles(paths map[string]string) error {
 	return nil
 }
 
+// CopyRecursively recursively copies srcDir to destDir
 func CopyRecursively(destDir, srcDir string) error {
 	return filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -57,6 +60,8 @@ func CopyRecursively(destDir, srcDir string) error {
 	})
 }
 
+// DirGlob performs a glob operation on dir. The returned matches do not have
+// dir as a prefix.
 func DirGlob(dir, glob string) ([]string, error) {
 	matches := []string{}
 	entries, err := os.ReadDir(dir)
@@ -77,6 +82,7 @@ func DirGlob(dir, glob string) ([]string, error) {
 	return matches, nil
 }
 
+// Mkdir calls os.MkdirAll as needed to ensure a directory exists
 func Mkdir(path string) error {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -92,6 +98,8 @@ func Mkdir(path string) error {
 	return nil
 }
 
+// Newer considers paths as a map of file path keys to file path values. It
+// returns true if any key path is newer than its corresponding value path.
 func Newer(paths map[string]string) (bool, error) {
 	for srcFile, destFile := range paths {
 		newer, err := target.Path(destFile, srcFile)
@@ -105,6 +113,7 @@ func Newer(paths map[string]string) (bool, error) {
 	return false, nil
 }
 
+// ZipDir writes a zip file containing all the files in inPath
 func ZipDir(inPath, outPath string) error {
 	outfh, err := os.Create(outPath)
 	if err != nil {
@@ -129,6 +138,8 @@ func ZipDir(inPath, outPath string) error {
 	return nil
 }
 
+// ZipFiles creates a zip file including files where the keys are paths to
+// files to include and values are how they should be named in the zip.
 func ZipFiles(out string, files map[string]string) error {
 	outfh, err := os.Create(out)
 	if err != nil {

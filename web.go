@@ -11,6 +11,8 @@ import (
 	"github.com/magefile/mage/target"
 )
 
+// BuildTypeScript builds all .ts files in srcDir to .js files in destDir, as
+// needed
 func BuildTypeScript(baseDir, srcDir, destDir string) error {
 	dirEntries, err := os.ReadDir(srcDir)
 	if err != nil {

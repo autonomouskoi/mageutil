@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// HasExec returns an error if any of cmds don't satisfy exec.LookPath
 func HasExec(cmds ...string) error {
 	missing := []string{}
 	for _, cmd := range cmds {
@@ -24,6 +25,7 @@ func HasExec(cmds ...string) error {
 	return nil
 }
 
+// HasFiles returns an error if any of files don't exist
 func HasFiles(files ...string) error {
 	missing := []string{}
 	for _, testPath := range files {
