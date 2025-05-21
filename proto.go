@@ -16,7 +16,7 @@ import (
 )
 
 // GoProto builds .pb.go code from a .proto
-func GoProto(dest, src, out, opt string) error {
+func GoProto(dest, src, out, include, opt string) error {
 	newer, err := target.Path(dest, src)
 	if err != nil {
 		return fmt.Errorf("testing %s vs %s: %w", src, dest, err)
@@ -26,7 +26,7 @@ func GoProto(dest, src, out, opt string) error {
 	}
 	VerboseF("protoc %s -> %s\n", src, dest)
 	err = sh.Run("protoc",
-		"-I", out,
+		"-I", include,
 		"--go_out", out,
 		"--go_opt", opt,
 		src,
@@ -38,14 +38,14 @@ func GoProto(dest, src, out, opt string) error {
 }
 
 // GoProtosInDir calls GoProto on all .proto files in dir
-func GoProtosInDir(dir, opt string) error {
+func GoProtosInDir(dir, include, opt string) error {
 	protos, err := DirGlob(dir, "*.proto")
 	if err != nil {
 		return fmt.Errorf("matchng files: %w", err)
 	}
 	for _, srcPath := range protos {
 		destPath := strings.TrimSuffix(srcPath, ".proto") + ".pb.go"
-		if err := GoProto(destPath, filepath.Join(dir, srcPath), dir, opt); err != nil {
+		if err := GoProto(destPath, filepath.Join(dir, srcPath), dir, include, opt); err != nil {
 			return fmt.Errorf("running protoc on %s: %w", srcPath, err)
 		}
 	}
