@@ -53,11 +53,11 @@ func GoProtosInDir(dir, include, opt string) error {
 }
 
 // TSProtosInDir creates _pb.js files in destDir for all .proto files in srcDir
-func TSProtosInDir(destDir, srcDir string) error {
+func TSProtosInDir(destDir, srcDir, node_modules_dir string) error {
 	if err := HasExec("protoc"); err != nil {
 		return err
 	}
-	plugin := filepath.Join(srcDir, "node_modules/.bin/protoc-gen-es")
+	plugin := filepath.Join(node_modules_dir, ".bin/protoc-gen-es")
 	if runtime.GOOS == "windows" {
 		plugin += ".cmd"
 	}

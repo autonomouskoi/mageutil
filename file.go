@@ -2,6 +2,7 @@ package mageutil
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -176,5 +177,91 @@ func addToZip(zw *zip.Writer, src, dest string) error {
 	if _, err := io.Copy(w, infh); err != nil {
 		return fmt.Errorf("writing %s file: %w", src, err)
 	}
+	return nil
+}
+
+// SyncDirBasic sync the contents of srcDir to destDir, creating destDir as
+// needed. When a file or directory exists in destDir but not srcDir it is
+// deleted from srcDir. If the size of a file from source matches the size of
+// the corresponding file in dest and the mod time of the dest file is the same
+// or newer than the src file, the file is not copied. SyncDirBasic handles only
+// files and directories, doesn't set timestamps or file permissions
+func SyncDirBasic(srcDir, destDir string) error {
+	srcEntries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", srcDir, err)
+	}
+	srcMap := make(map[string]os.DirEntry, len(srcEntries))
+	for i, entry := range srcEntries {
+		srcMap[entry.Name()] = srcEntries[i]
+	}
+
+	destEntries, err := os.ReadDir(destDir)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("reading %s: %w", destDir, err)
+		}
+		if err := Mkdir(destDir); err != nil {
+			return fmt.Errorf("creating %s: %w", destDir, err)
+		}
+	}
+	destMap := make(map[string]os.DirEntry, len(destEntries))
+	for i, entry := range destEntries {
+		destMap[entry.Name()] = destEntries[i]
+	}
+
+	// delete unwanted
+	for name := range destMap {
+		if _, ok := srcMap[name]; !ok {
+			deletePath := filepath.Join(destDir, name)
+			if err := sh.Rm(deletePath); err != nil {
+				return fmt.Errorf("deleting %s: %w", deletePath, err)
+			}
+		}
+	}
+
+	// compare wanted
+	for name, entry := range srcMap {
+		srcPath := filepath.Join(srcDir, name)
+		destPath := filepath.Join(destDir, name)
+		if entry.IsDir() {
+			if destEntry, present := destMap[name]; present && !destEntry.IsDir() {
+				if err := sh.Rm(destPath); err != nil {
+					return fmt.Errorf("deleting non-dir %s: %w", destPath, err)
+				}
+			}
+			if err := SyncDirBasic(srcPath, destPath); err != nil {
+				return fmt.Errorf("syncing %s -> %s: %w", srcPath, destPath, err)
+			}
+			continue
+		}
+
+		srcStat, err := os.Stat(srcPath)
+		if err != nil {
+			return fmt.Errorf("statting %s: %w", srcPath, err)
+		}
+		doCopy := false
+		if destStat, err := os.Stat(destPath); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("stating %s: %w", destPath, err)
+			}
+			doCopy = true // not existing is okay
+		} else if destStat.IsDir() { // src is not a dir
+			if err := sh.Rm(destPath); err != nil {
+				return fmt.Errorf("deleting non-file %s: %w", destPath, err)
+			}
+			doCopy = true
+		} else if srcStat.Size() != destStat.Size() {
+			doCopy = true
+		} else if srcStat.ModTime().After(destStat.ModTime()) {
+			doCopy = true
+		}
+		if doCopy {
+			if err := sh.Copy(destPath, srcPath); err != nil {
+				return fmt.Errorf("copying %s -> %s: %w", srcPath, destPath, err)
+			}
+		}
+	}
+
 	return nil
 }
