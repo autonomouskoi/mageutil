@@ -130,7 +130,7 @@ func TinyGoProto(
 
 	err = sh.Run("protoc",
 		"--plugin", pcggl,
-		"--go-lite_opt", "features=marshal+unmarshal+size+equal+clone",
+		"--go-lite_opt", "features=marshal+unmarshal+size+equal+clone+json",
 		"-I", includeDir,
 		"--go-lite_out", dstDir,
 		srcPath,
