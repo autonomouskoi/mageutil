@@ -1,6 +1,7 @@
 package mageutil
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -52,18 +53,57 @@ func GoProtosInDir(dir, include, opt string) error {
 	return nil
 }
 
+var tsProtoPluginPath string
+var tsProtoPluginOnce sync.Once
+
+func tsProtoPlugin(node_modules_dir string) string {
+	tsProtoPluginOnce.Do(func() {
+		if err := HasExec("protoc"); err != nil {
+			VerboseF("ERROR finding protoc: %v", err)
+			return
+		}
+		plugin := filepath.Join(node_modules_dir, ".bin/protoc-gen-es")
+		if runtime.GOOS == "windows" {
+			plugin += ".cmd"
+		}
+		if err := HasFiles(plugin); err != nil {
+			VerboseF("ERROR finding protoc-gen-es: %v", err)
+			return
+		}
+		tsProtoPluginPath = plugin
+	})
+	return tsProtoPluginPath
+}
+
+func TSProto(destDir, srcPath, includeDir, node_modules_dir string) error {
+	plugin := tsProtoPlugin(node_modules_dir)
+	if plugin == "" {
+		return errors.New("no protoc/protoc-gen-es")
+	}
+	baseName := strings.TrimSuffix(filepath.Base(srcPath), ".proto")
+	destFile := filepath.Join(destDir, baseName+"_pb.js")
+	newer, err := target.Path(destFile, srcPath)
+	if err != nil {
+		return fmt.Errorf("testing %s vs %s: %w", srcPath, destFile, err)
+	}
+	if !newer {
+		return nil
+	}
+	VerboseF("generating proto %s -> %s\n", srcPath, destFile)
+	err = sh.Run("protoc",
+		"--plugin", "protoc-gen-es="+plugin,
+		"-I", includeDir,
+		"--es_out", destDir,
+		srcPath,
+	)
+	if err != nil {
+		return fmt.Errorf("generating proto %s -> %s\n: %w", srcPath, destFile, err)
+	}
+	return nil
+}
+
 // TSProtosInDir creates _pb.js files in destDir for all .proto files in srcDir
 func TSProtosInDir(destDir, srcDir, node_modules_dir string) error {
-	if err := HasExec("protoc"); err != nil {
-		return err
-	}
-	plugin := filepath.Join(node_modules_dir, ".bin/protoc-gen-es")
-	if runtime.GOOS == "windows" {
-		plugin += ".cmd"
-	}
-	if err := HasFiles(plugin); err != nil {
-		return err
-	}
 	protoDestDir := filepath.Join(destDir, "pb")
 	if err := Mkdir(protoDestDir); err != nil {
 		return fmt.Errorf("creating %s: %w", protoDestDir, err)
@@ -73,25 +113,9 @@ func TSProtosInDir(destDir, srcDir, node_modules_dir string) error {
 		return fmt.Errorf("matching files: %w", err)
 	}
 	for _, srcFile := range protos {
-		baseName := strings.TrimSuffix(filepath.Base(srcFile), ".proto")
-		destFile := filepath.Join(protoDestDir, baseName+"_pb.js")
 		srcFile = filepath.Join(srcDir, srcFile)
-		newer, err := target.Path(destFile, srcFile)
-		if err != nil {
-			return fmt.Errorf("testing %s vs %s: %w", srcFile, destFile, err)
-		}
-		if !newer {
-			continue
-		}
-		VerboseF("generating proto %s -> %s\n", srcFile, destFile)
-		err = sh.Run("protoc",
-			"--plugin", "protoc-gen-es="+plugin,
-			"-I", srcDir,
-			"--es_out", protoDestDir,
-			srcFile,
-		)
-		if err != nil {
-			return fmt.Errorf("generating proto %s -> %s\n: %w", srcFile, destFile, err)
+		if err := TSProto(protoDestDir, srcFile, srcDir, node_modules_dir); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -2,6 +2,7 @@ package mageutil
 
 import (
 	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -263,5 +264,17 @@ func SyncDirBasic(srcDir, destDir string) error {
 		}
 	}
 
+	return nil
+}
+
+func ReplaceInFile(filepath, from, to string) error {
+	b, err := os.ReadFile(filepath)
+	if err != nil {
+		return fmt.Errorf("reading file: %w", err)
+	}
+	replaced := bytes.ReplaceAll(b, []byte(from), []byte(to))
+	if err := os.WriteFile(filepath, replaced, 0); err != nil {
+		return fmt.Errorf("writing file: %w", err)
+	}
 	return nil
 }
