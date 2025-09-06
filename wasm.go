@@ -13,8 +13,8 @@ import (
 var tinygoPath string
 var tinygoOnce sync.Once
 
-func TinyGoWASM(srcDir, outfile string) error {
-	newer, err := target.Dir(outfile, srcDir)
+func TinyGoWASM(outfile string, srcDir string, deps ...string) error {
+	newer, err := target.Dir(outfile, append(deps, srcDir)...)
 	if err != nil {
 		return fmt.Errorf("testing for newer files: %w", err)
 	}
@@ -37,7 +37,7 @@ func TinyGoWASM(srcDir, outfile string) error {
 	return sh.Run(tinygoPath, "build",
 		"-target", "wasi",
 		"-buildmode", "c-shared",
-		"-no-debug", "-scheduler=none", "-panic=trap", // reduce size
+		"-no-debug", "-scheduler=none", // "-panic=trap", // reduce size
 		"-o", outfile,
 		srcDir,
 	)
